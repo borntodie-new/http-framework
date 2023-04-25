@@ -71,8 +71,34 @@ func (r *router) addRouter(method string, pattern string, handleFunc HandleFunc)
 }
 
 // findRouter 匹配路由
-func (r *router) findRouter(method string, path string) *node {
-	return nil
+func (r *router) findRouter(method string, pattern string) (*node, bool) {
+	root, ok := r.trees[method]
+	if !ok {
+		// 不存在根路由树
+		return nil, false
+	}
+	// 特殊处理根路由
+	if pattern == "/" {
+		return root, true
+	}
+	// 切割pattern
+	// 还是需要将前面的 / 切割出去
+	parts := strings.Split(strings.Trim(pattern, "/"), "/")
+	for _, part := range parts {
+		if part == "" {
+			// 表示pattern是 /asud//asd/asd这种连续出现多个 / 情况
+			// 其实这里可以不判断的，出现这样的情况，会切出 ""
+			// 那 "" 肯定在路由树中找不到
+			// 不过这里直接做判断，就省得在做无效功
+			return nil, false
+		}
+		root, ok = root.childOf(part)
+		if !ok {
+			return nil, false
+		}
+	}
+	// 这里我们也不能直接返回，还需要在进一步判断 当前找到的node节点的handler是否非nil，非nil才算成功
+	return root, root.handler != nil
 }
 
 // node 树上节点的结构
@@ -99,7 +125,10 @@ type node struct {
 // childOf 用于匹配节点
 // 查找节点，判断当前的节点的子节点中有没有path节点
 func (n *node) childOf(part string) (*node, bool) {
-	return nil, false
+	// 因为这里是查找，所以不存在当前节点的children属性是nil的情况
+	// 只有一种情况会是这样，就是叶子节点
+	child, ok := n.children[part]
+	return child, ok
 }
 
 // childOrCreate 用于注册路由使用
