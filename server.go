@@ -50,8 +50,8 @@ func (s *HTTPServer) Start(addr string) error {
 //	s.addRouter(method, path, handleFunc)
 //}
 
-func (s *HTTPServer) GET(path string, handleFunc HandleFunc) {
-	s.addRouter(http.MethodGet, path, handleFunc)
+func (s *HTTPServer) GET(pattern string, handleFunc HandleFunc) {
+	s.addRouter(http.MethodGet, pattern, handleFunc)
 }
 
 // NewHTTPServer 构造方法
