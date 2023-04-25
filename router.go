@@ -9,6 +9,11 @@ type router struct {
 	trees map[string]*node
 }
 
+// newRouter 构造方法
+func newRouter() *router {
+	return &router{trees: map[string]*node{}}
+}
+
 // addRouter 注册路由
 func (r *router) addRouter(method string, path string, handleFunc HandleFunc) {
 

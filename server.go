@@ -3,7 +3,7 @@ package geek_web
 import "net/http"
 
 // HandleFunc 视图函数的唯一签名
-type HandleFunc func()
+type HandleFunc func(ctx *Context)
 
 // Server 接口
 // 为什么要这么设计，我们直接一个结构体实现http.Handler接口不可以吗
@@ -24,7 +24,9 @@ type Server interface {
 }
 
 // HTTPServer 实现一个HTTP协议的Server接口
-type HTTPServer struct{}
+type HTTPServer struct {
+	*router
+}
 
 // 这条语句没有任何实际作用，只是为了在语法层面上能够保证HTTPServer结构体实现了Server接口
 var _ Server = &HTTPServer{}
@@ -43,7 +45,18 @@ func (s *HTTPServer) Start(addr string) error {
 // addRouter 作为注册路由的唯一通道
 // 疑问1：路由存在哪里？
 // 疑问2：路由以怎样的结构存储？
-func (s *HTTPServer) addRouter(method string, path string, handleFunc HandleFunc) {
-	//TODO implement me
-	panic("implement me")
+// 因为*router嵌到HTTPServer中了，当*router实现了addRouter方法，也就表示HTTPServer实现了addRouter方法，不过这样做耦合性高
+//func (s *HTTPServer) addRouter(method string, path string, handleFunc HandleFunc) {
+//	s.addRouter(method, path, handleFunc)
+//}
+
+func (s *HTTPServer) GET(path string, handleFunc HandleFunc) {
+	s.addRouter(http.MethodGet, path, handleFunc)
+}
+
+// NewHTTPServer 构造方法
+func NewHTTPServer() *HTTPServer {
+	return &HTTPServer{
+		router: newRouter(),
+	}
 }
