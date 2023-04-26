@@ -11,3 +11,10 @@ type Context struct {
 	// Response 响应。建议自行封装，为了扩展性
 	Response http.ResponseWriter
 }
+
+func newContext(w http.ResponseWriter, r *http.Request) *Context {
+	return &Context{
+		Request:  r,
+		Response: w,
+	}
+}

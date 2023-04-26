@@ -33,8 +33,17 @@ var _ Server = &HTTPServer{}
 
 // ServeHTTP  向前对接客户端请求，向后对接Web框架
 func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//TODO implement me
-	panic("implement me")
+	// 1. 构建上下文
+	ctx := newContext(w, r)
+	// 2. 匹配路由
+	n, ok := s.findRouter(r.Method, r.URL.Path)
+	if !ok || n.handler == nil {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("404 NOT FOUND"))
+		return
+	}
+	// 3. 执行命中路由的视图函数
+	n.handler(ctx)
 }
 
 func (s *HTTPServer) Start(addr string) error {
@@ -52,6 +61,18 @@ func (s *HTTPServer) Start(addr string) error {
 
 func (s *HTTPServer) GET(pattern string, handleFunc HandleFunc) {
 	s.addRouter(http.MethodGet, pattern, handleFunc)
+}
+
+func (s *HTTPServer) POST(pattern string, handleFunc HandleFunc) {
+	s.addRouter(http.MethodPost, pattern, handleFunc)
+}
+
+func (s *HTTPServer) DELETE(pattern string, handleFunc HandleFunc) {
+	s.addRouter(http.MethodDelete, pattern, handleFunc)
+}
+
+func (s *HTTPServer) PUT(pattern string, handleFunc HandleFunc) {
+	s.addRouter(http.MethodPut, pattern, handleFunc)
 }
 
 // NewHTTPServer 构造方法
