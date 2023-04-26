@@ -116,6 +116,7 @@ type node struct {
 
 	// handler 命中路由需要执行的逻辑
 	// 只有叶子节点才会有这个属性
+	// 改正：不是只有叶子节点才会有这个属性，/user和/user/login这两个都有这个属性，这两个路由也都是合法的
 	handler HandleFunc
 
 	// 通配符 * 表达的节点，任意匹配
