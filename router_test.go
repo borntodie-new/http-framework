@@ -180,6 +180,11 @@ func TestParamFindRouter(t *testing.T) {
 			method:  "GET",
 			pattern: "/goods/:id/update/:action/delete",
 		},
+		{
+			name:    "测试 GET /study/:course/:action",
+			method:  "GET",
+			pattern: "/study/:course/:action",
+		},
 	}
 
 	r := newRouter()
@@ -206,6 +211,11 @@ func TestParamFindRouter(t *testing.T) {
 			name:    "测试 GET /goods/:id/update/:action/delete",
 			method:  "GET",
 			pattern: "/goods/11/update/jason/delete",
+		},
+		{
+			name:    "测试 GET /study/:course/:action",
+			method:  "GET",
+			pattern: "/study/python/update",
 		},
 	}
 	for _, wr := range wantRouter {
