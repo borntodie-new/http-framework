@@ -36,7 +36,7 @@ func (r *router) addRouter(method string, pattern string, handleFunc HandleFunc)
 	if !ok {
 		// 路由树不存在，直接创建并赋值
 		root = &node{
-			path: "/",
+			part: "/",
 		}
 		r.trees[method] = root
 	}
@@ -71,34 +71,52 @@ func (r *router) addRouter(method string, pattern string, handleFunc HandleFunc)
 }
 
 // findRouter 匹配路由
-func (r *router) findRouter(method string, pattern string) (*node, bool) {
+// 我们想一想：
+// 1. 对于精确匹配：我们需要做的操作不多，只需要将匹配到的节点返回即可
+// 2. 对于通配符匹配：我们不支持这种路由：/assets/*filepath/jason，也就是说，当一个路由中出现了*，就表示匹配到了第一个节点就返回
+// 3. 对于参数匹配：我们需要支持这种路由：/user/:id/update，也就是说，当一个路由中出现了 : ，就表示还得按照精确匹配的逻辑，一直执行匹配下去
+func (r *router) findRouter(method string, pattern string) (*node, map[string]string, bool) {
+	// 保存参数路径参数
+	params := make(map[string]string)
 	root, ok := r.trees[method]
 	if !ok {
 		// 不存在根路由树
-		return nil, false
+		return nil, params, false
 	}
 	// 特殊处理根路由
 	if pattern == "/" {
-		return root, true
+		return root, params, true
 	}
 	// 切割pattern
 	// 还是需要将前面的 / 切割出去
 	parts := strings.Split(strings.Trim(pattern, "/"), "/")
 	for _, part := range parts {
+		pOk := false
 		if part == "" {
 			// 表示pattern是 /asud//asd/asd这种连续出现多个 / 情况
 			// 其实这里可以不判断的，出现这样的情况，会切出 ""
 			// 那 "" 肯定在路由树中找不到
 			// 不过这里直接做判断，就省得在做无效功
-			return nil, false
+			return nil, params, false
 		}
-		root, ok = root.childOf(part)
+		root, pOk, ok = root.childOf(part)
 		if !ok {
-			return nil, false
+			return nil, params, false
+		}
+		if pOk { // 是否是参数匹配 :和*匹配
+			// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
+			// 问题是如何做到贪婪匹配?
+			// 注册的路由：/assets/*filepath
+			// 请求的路由：/assets/css/neo.css
+			// 现在用filepath作为key
+			// 现在用css/neo.css作为value
+			index := strings.Index(pattern, part)
+			params[root.part[1:]] = pattern[index:]
+			return root, params, true
 		}
 	}
 	// 这里我们也不能直接返回，还需要在进一步判断 当前找到的node节点的handler是否非nil，非nil才算成功
-	return root, root.handler != nil
+	return root, params, root.handler != nil
 }
 
 // node 树上节点的结构
@@ -106,10 +124,10 @@ func (r *router) findRouter(method string, pattern string) (*node, bool) {
 // 1. 静态匹配
 // 2. 通配符匹配
 type node struct {
-	// path 单块的路径
+	// part 单块的路径
 	// /user/login => [user, login]
-	// path = user
-	path string
+	// part = user
+	part string
 
 	// children 当前节点下所有的子节点
 	children map[string]*node
@@ -120,21 +138,36 @@ type node struct {
 	handler HandleFunc
 
 	// 通配符 * 表达的节点，任意匹配
-	startChild *node
+	starChild *node
 }
 
 // childOf 用于匹配节点
 // 查找节点，判断当前的节点的子节点中有没有path节点
-func (n *node) childOf(part string) (*node, bool) {
+// 优先级：精确匹配 > :匹配 > *匹配
+// 第一个返回值是匹配到的节点
+// 第二个返回值是控制是否是参数匹配：: 和 * 匹配
+// 第三个返回值是控制是否匹配到节点
+func (n *node) childOf(part string) (*node, bool, bool) {
 	// 因为这里是查找，所以不存在当前节点的children属性是nil的情况
 	// 只有一种情况会是这样，就是叶子节点
 	child, ok := n.children[part]
-	return child, ok
+	if !ok {
+		// 如果精确匹配没有匹配到，就用 * 匹配
+		return n.starChild, true, n.starChild != nil
+	}
+	return child, false, ok
 }
 
 // childOrCreate 用于注册路由使用
 // 查找节点，判断当前节点的子节点中是否存在path节点，已存在返回path节点，不存在就创建节点并添加到子节点中
 func (n *node) childOrCreate(part string) *node {
+	if strings.HasPrefix(part, "*") {
+		// 是通配符 * 的情况
+		if n.starChild == nil { // 多一层判断，如果starChild不是nil，就表示之前这个路由被注册过了
+			n.starChild = &node{part: part}
+		}
+		return n.starChild
+	}
 	// 判断当前节点的子节点属性是否为nil
 	// 为nil就创建
 	if n.children == nil {
@@ -144,7 +177,7 @@ func (n *node) childOrCreate(part string) *node {
 	if !ok {
 		// part节点不存在，直接创建并添加
 		child = &node{
-			path: part,
+			part: part,
 		}
 		n.children[part] = child
 	}
