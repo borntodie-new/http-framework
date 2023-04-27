@@ -95,8 +95,8 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 	// 切割pattern
 	// 还是需要将前面的 / 切割出去
 	parts := strings.Split(strings.Trim(pattern, "/"), "/")
-	for i, part := range parts {
-		//pOk := false
+	for _, part := range parts {
+		pOk := false
 		if part == "" {
 			// 表示pattern是 /asud//asd/asd这种连续出现多个 / 情况
 			// 其实这里可以不判断的，出现这样的情况，会切出 ""
@@ -104,41 +104,23 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 			// 不过这里直接做判断，就省得在做无效功
 			return nil, params, false
 		}
-		root, _, ok = root.childOf(part)
+		root, pOk, ok = root.childOf(part)
 		if !ok {
 			return nil, params, false
 		}
-		if root.paramChild != nil {
-			// 参数路由 : ，匹配到还需要继续往下查找
-			// 并且需要记录好参数
-			// 现在出现一个问题: 这里映射到的数据是错误的
-			// /study/:course/:action
-			// /study/python/update
-			// 期待的结果是：{"course": python, "action": update}
-			// 实际的结果是：{"course": study, "action": python}
-			// 就是说数据现在是错位了
-			params[root.paramChild.part[1:]] = parts[i+1]
-			continue
-		}
-		if root.starChild != nil {
-			// 匹配到 * 节点，贪婪匹配之后直接返回
-			// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
-			// 问题是如何做到贪婪匹配?
-			// 注册的路由：/assets/*filepath
-			// 请求的路由：/assets/css/neo.css
-			// 现在用filepath作为key
-			// 现在用css/neo.css作为value
-			index := strings.Index(pattern, part) + len(part) + 1
-			params[root.starChild.part[1:]] = pattern[index:]
-			return root.starChild, params, true
-		}
-		//if pOk { // 是否是参数匹配 :和*匹配
-		//	if root.paramChild != nil {
-		//		// 参数路由 : ，匹配到还需要继续往下查找
-		//		// 并且需要记录好参数
-		//		params[root.part[1:]] = part
-		//		continue
-		//	}
+		//if root.paramChild != nil {
+		//	// 参数路由 : ，匹配到还需要继续往下查找
+		//	// 并且需要记录好参数
+		//	// 现在出现一个问题: 这里映射到的数据是错误的
+		//	// /study/:course/:action
+		//	// /study/python/update
+		//	// 期待的结果是：{"course": python, "action": update}
+		//	// 实际的结果是：{"course": study, "action": python}
+		//	// 就是说数据现在是错位了
+		//	params[root.paramChild.part[1:]] = parts[i+1]
+		//	continue
+		//}
+		//if root.starChild != nil {
 		//	// 匹配到 * 节点，贪婪匹配之后直接返回
 		//	// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
 		//	// 问题是如何做到贪婪匹配?
@@ -146,10 +128,35 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 		//	// 请求的路由：/assets/css/neo.css
 		//	// 现在用filepath作为key
 		//	// 现在用css/neo.css作为value
-		//	index := strings.Index(pattern, part)
-		//	params[root.part[1:]] = pattern[index:]
-		//	return root, params, true
+		//	index := strings.Index(pattern, part) + len(part) + 1
+		//	params[root.starChild.part[1:]] = pattern[index:]
+		//	return root.starChild, params, true
 		//}
+		if pOk { // 是否是参数匹配 :和*匹配
+			if strings.HasPrefix(root.part, ":") { // 处理参数路由
+				params[root.part[1:]] = part
+			} else if strings.HasPrefix(root.part, "*") { // 处理通配符路由
+				index := strings.Index(pattern, part)
+				params[root.part[1:]] = pattern[index:]
+				return root, params, true
+			}
+			//if root.paramChild != nil {
+			//	// 参数路由 : ，匹配到还需要继续往下查找
+			//	// 并且需要记录好参数
+			//	params[root.part[1:]] = part
+			//} else if root.starChild != nil {
+			//	// 匹配到 * 节点，贪婪匹配之后直接返回
+			//	// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
+			//	// 问题是如何做到贪婪匹配?
+			//	// 注册的路由：/assets/*filepath
+			//	// 请求的路由：/assets/css/neo.css
+			//	// 现在用filepath作为key
+			//	// 现在用css/neo.css作为value
+			//	index := strings.Index(pattern, part)
+			//	params[root.part[1:]] = pattern[index:]
+			//	return root, params, true
+			//}
+		}
 	}
 	// 这里我们也不能直接返回，还需要在进一步判断 当前找到的node节点的handler是否非nil，非nil才算成功
 	return root, params, root.handler != nil
