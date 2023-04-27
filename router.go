@@ -104,15 +104,20 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 			return nil, params, false
 		}
 		if pOk { // 是否是参数匹配 :和*匹配
-			// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
-			// 问题是如何做到贪婪匹配?
-			// 注册的路由：/assets/*filepath
-			// 请求的路由：/assets/css/neo.css
-			// 现在用filepath作为key
-			// 现在用css/neo.css作为value
-			index := strings.Index(pattern, part)
-			params[root.part[1:]] = pattern[index:]
-			return root, params, true
+			if root.starChild != nil { // 匹配到 * 节点，贪婪匹配之后直接返回
+				// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
+				// 问题是如何做到贪婪匹配?
+				// 注册的路由：/assets/*filepath
+				// 请求的路由：/assets/css/neo.css
+				// 现在用filepath作为key
+				// 现在用css/neo.css作为value
+				index := strings.Index(pattern, part)
+				params[root.part[1:]] = pattern[index:]
+				return root, params, true
+			}
+			// 参数路由 : ，匹配到还需要继续往下查找
+			// 并且需要记录好参数
+			params[root.part[1:]] = part
 		}
 	}
 	// 这里我们也不能直接返回，还需要在进一步判断 当前找到的node节点的handler是否非nil，非nil才算成功
@@ -139,6 +144,9 @@ type node struct {
 
 	// 通配符 * 表达的节点，任意匹配
 	starChild *node
+
+	// 参数 : 匹配
+	paramChild *node
 }
 
 // childOf 用于匹配节点
@@ -152,6 +160,10 @@ func (n *node) childOf(part string) (*node, bool, bool) {
 	// 只有一种情况会是这样，就是叶子节点
 	child, ok := n.children[part]
 	if !ok {
+		// 如果精确匹配没有匹配到，先用 : 节点匹配，再用 * 节点匹配
+		if n.paramChild != nil {
+			return n.paramChild, true, n.paramChild != nil
+		}
 		// 如果精确匹配没有匹配到，就用 * 匹配
 		return n.starChild, true, n.starChild != nil
 	}
@@ -161,6 +173,13 @@ func (n *node) childOf(part string) (*node, bool, bool) {
 // childOrCreate 用于注册路由使用
 // 查找节点，判断当前节点的子节点中是否存在path节点，已存在返回path节点，不存在就创建节点并添加到子节点中
 func (n *node) childOrCreate(part string) *node {
+	if strings.HasPrefix(part, ":") {
+		// 是参数 : 的情况
+		if n.paramChild == nil { // 多判断一层，如果paramChild不是nil，就表示之前这个路由被注册过了
+			n.paramChild = &node{part: part}
+		}
+		return n.paramChild
+	}
 	if strings.HasPrefix(part, "*") {
 		// 是通配符 * 的情况
 		if n.starChild == nil { // 多一层判断，如果starChild不是nil，就表示之前这个路由被注册过了
