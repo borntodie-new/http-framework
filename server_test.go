@@ -1,7 +1,6 @@
 package geek_web
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 )
@@ -9,23 +8,34 @@ import (
 func TestServer(t *testing.T) {
 	s := NewHTTPServer()
 	s.GET("/user", func(ctx *Context) {
-		ctx.Response.WriteHeader(http.StatusOK)
-		_, _ = ctx.Response.Write([]byte("/user"))
+		_ = ctx.JSON(http.StatusOK, H{
+			"code": 200,
+			"msg":  "请求成功" + ctx.Pattern,
+		})
 	})
 	s.GET("/user/login", func(ctx *Context) {
-		ctx.Response.WriteHeader(http.StatusOK)
-		_, _ = ctx.Response.Write([]byte("/user/login"))
+		_ = ctx.JSON(http.StatusOK, H{
+			"code": 200,
+			"msg":  "请求成功" + ctx.Pattern,
+		})
 	})
 	s.GET("/assets/*filepath", func(ctx *Context) {
-		filepath := ctx.Params["filepath"]
-		ctx.Response.WriteHeader(http.StatusOK)
-		_, _ = ctx.Response.Write([]byte(fmt.Sprintf("你是想找【%s】文件吗？", filepath)))
+		filePath, _ := ctx.Param("filepath")
+		_ = ctx.JSON(http.StatusOK, H{
+			"code": 200,
+			"msg":  "请求成功" + ctx.Pattern,
+			"info": "你是想访问我的这个文件吗？【" + filePath + "]",
+		})
 	})
 	s.GET("/user/:id/:action", func(ctx *Context) {
-		id := ctx.Params["id"]
-		action := ctx.Params["action"]
-		ctx.Response.WriteHeader(http.StatusOK)
-		_, _ = ctx.Response.Write([]byte(fmt.Sprintf("你是不是想对ID是%s的用户进行%s操作", id, action)))
+		id, _ := ctx.Param("id")
+		action, _ := ctx.Param("action")
+		_ = ctx.JSON(http.StatusOK, H{
+			"code":   200,
+			"msg":    "请求成功" + ctx.Pattern,
+			"id":     id,
+			"action": action,
+		})
 	})
 	_ = s.Start(":8080")
 }
