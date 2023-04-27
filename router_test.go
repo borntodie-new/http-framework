@@ -81,9 +81,9 @@ func TestStarAddRouter(t *testing.T) {
 			pattern: "/asserts/*filepath",
 		},
 		{
-			name:    "测试 GET /asserts/*filepath",
+			name:    "测试 GET /asserts/:id",
 			method:  "GET",
-			pattern: "/asserts/*filepath",
+			pattern: "/asserts/:id",
 		},
 	}
 
@@ -95,6 +95,36 @@ func TestStarAddRouter(t *testing.T) {
 		r.addRouter(tt.method, tt.pattern, mockHandler)
 	}
 	t.Log(r)
+}
+
+func TestParamAddRouter(t *testing.T) {
+	mockHandler := func(ctx *Context) {}
+
+	testRouter := []struct {
+		name    string
+		method  string
+		pattern string
+	}{
+		{
+
+			name:    "测试 GET /user/:id",
+			method:  "GET",
+			pattern: "/user/:id",
+		},
+		{
+			name:    "测试 GET /user/*action",
+			method:  "GET",
+			pattern: "/user/login/*action",
+		},
+	}
+
+	r := newRouter()
+	for _, tt := range testRouter {
+		//t.Run(tt.name, func(t *testing.T) {
+		//	r.addRouter(tt.method, tt.pattern, mockHandler)
+		//})
+		r.addRouter(tt.method, tt.pattern, mockHandler)
+	}
 }
 
 func TestStarFindRouter(t *testing.T) {
@@ -141,14 +171,14 @@ func TestParamFindRouter(t *testing.T) {
 			pattern: "/user/:id",
 		},
 		{
-			name:    "测试 GET /user/:id/update",
+			name:    "测试 GET /order/:id/update",
 			method:  "GET",
-			pattern: "/user/:id/update",
+			pattern: "/order/:id/update",
 		},
 		{
-			name:    "测试 GET /user/:id/update/:action/delete",
+			name:    "测试 GET /goods/:id/update/:action/delete",
 			method:  "GET",
-			pattern: "/user/:id/update/:action/delete",
+			pattern: "/goods/:id/update/:action/delete",
 		},
 	}
 
@@ -168,14 +198,64 @@ func TestParamFindRouter(t *testing.T) {
 			pattern: "/user/15",
 		},
 		{
-			name:    "测试 GET /user/:id/update",
+			name:    "测试 GET /order/:id/update",
 			method:  "GET",
-			pattern: "/user/:21/update",
+			pattern: "/order/21/update",
 		},
 		{
-			name:    "测试 GET /user/:id/update/:action/delete",
+			name:    "测试 GET /goods/:id/update/:action/delete",
 			method:  "GET",
-			pattern: "/user/:11/update/jason/delete",
+			pattern: "/goods/11/update/jason/delete",
+		},
+	}
+	for _, wr := range wantRouter {
+		t.Run(wr.name, func(t *testing.T) {
+			_, params, ok := r.findRouter(wr.method, wr.pattern)
+			assert.True(t, ok)
+			t.Log(params)
+		})
+	}
+}
+
+func TestRegFindRouter(t *testing.T) {
+	mockHandler := func(ctx *Context) {}
+
+	testRouter := []struct {
+		name    string
+		method  string
+		pattern string
+	}{
+		//{
+		//	name:    "测试 GET /user/:id",
+		//	method:  "GET",
+		//	pattern: "/user/:id",
+		//},
+		{
+			name:    "测试 GET /user/<.*?>",
+			method:  "GET",
+			pattern: "/user/<.*?>",
+		},
+	}
+
+	r := newRouter()
+	for _, tt := range testRouter {
+		r.addRouter(tt.method, tt.pattern, mockHandler)
+	}
+
+	wantRouter := []struct {
+		name    string
+		method  string
+		pattern string
+	}{
+		{
+			name:    "测试 GET /user/<.*?>",
+			method:  "GET",
+			pattern: "/user/15",
+		},
+		{
+			name:    "测试 GET /user/<.*?>",
+			method:  "GET",
+			pattern: "/user/login",
 		},
 	}
 	for _, wr := range wantRouter {
