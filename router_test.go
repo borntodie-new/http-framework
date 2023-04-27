@@ -126,3 +126,63 @@ func TestStarFindRouter(t *testing.T) {
 	assert.True(t, ok)
 	t.Log(params)
 }
+
+func TestParamFindRouter(t *testing.T) {
+	mockHandler := func(ctx *Context) {}
+
+	testRouter := []struct {
+		name    string
+		method  string
+		pattern string
+	}{
+		{
+			name:    "测试 GET /user/:id",
+			method:  "GET",
+			pattern: "/user/:id",
+		},
+		{
+			name:    "测试 GET /user/:id/update",
+			method:  "GET",
+			pattern: "/user/:id/update",
+		},
+		{
+			name:    "测试 GET /user/:id/update/:action/delete",
+			method:  "GET",
+			pattern: "/user/:id/update/:action/delete",
+		},
+	}
+
+	r := newRouter()
+	for _, tt := range testRouter {
+		r.addRouter(tt.method, tt.pattern, mockHandler)
+	}
+
+	wantRouter := []struct {
+		name    string
+		method  string
+		pattern string
+	}{
+		{
+			name:    "测试 GET /user/:id",
+			method:  "GET",
+			pattern: "/user/15",
+		},
+		{
+			name:    "测试 GET /user/:id/update",
+			method:  "GET",
+			pattern: "/user/:21/update",
+		},
+		{
+			name:    "测试 GET /user/:id/update/:action/delete",
+			method:  "GET",
+			pattern: "/user/:11/update/jason/delete",
+		},
+	}
+	for _, wr := range wantRouter {
+		t.Run(wr.name, func(t *testing.T) {
+			_, params, ok := r.findRouter(wr.method, wr.pattern)
+			assert.True(t, ok)
+			t.Log(params)
+		})
+	}
+}
