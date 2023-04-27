@@ -95,7 +95,7 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 	// 切割pattern
 	// 还是需要将前面的 / 切割出去
 	parts := strings.Split(strings.Trim(pattern, "/"), "/")
-	for _, part := range parts {
+	for i, part := range parts {
 		//pOk := false
 		if part == "" {
 			// 表示pattern是 /asud//asd/asd这种连续出现多个 / 情况
@@ -111,7 +111,13 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 		if root.paramChild != nil {
 			// 参数路由 : ，匹配到还需要继续往下查找
 			// 并且需要记录好参数
-			params[root.paramChild.part[1:]] = part
+			// 现在出现一个问题: 这里映射到的数据是错误的
+			// /study/:course/:action
+			// /study/python/update
+			// 期待的结果是：{"course": python, "action": update}
+			// 实际的结果是：{"course": study, "action": python}
+			// 就是说数据现在是错位了
+			params[root.paramChild.part[1:]] = parts[i+1]
 			continue
 		}
 		if root.starChild != nil {
@@ -238,7 +244,7 @@ func (n *node) childOrCreate(part string) (*node, bool) {
 
 // bug修复
 // 1. 修复参数路由也会贪婪匹配
-// 2. 解决一个路由同层级上，同时注册参数路由和通配符路由
+// 2. 解决一个路由同层级上，同时注册
 
 /**
 - 总结一下
