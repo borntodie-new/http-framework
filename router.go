@@ -104,20 +104,22 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 			return nil, params, false
 		}
 		if pOk { // 是否是参数匹配 :和*匹配
-			if root.starChild != nil { // 匹配到 * 节点，贪婪匹配之后直接返回
-				// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
-				// 问题是如何做到贪婪匹配?
-				// 注册的路由：/assets/*filepath
-				// 请求的路由：/assets/css/neo.css
-				// 现在用filepath作为key
-				// 现在用css/neo.css作为value
-				index := strings.Index(pattern, part)
-				params[root.part[1:]] = pattern[index:]
-				return root, params, true
+			if root.paramChild != nil {
+				// 参数路由 : ，匹配到还需要继续往下查找
+				// 并且需要记录好参数
+				params[root.part[1:]] = part
+				continue
 			}
-			// 参数路由 : ，匹配到还需要继续往下查找
-			// 并且需要记录好参数
-			params[root.part[1:]] = part
+			// 匹配到 * 节点，贪婪匹配之后直接返回
+			// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
+			// 问题是如何做到贪婪匹配?
+			// 注册的路由：/assets/*filepath
+			// 请求的路由：/assets/css/neo.css
+			// 现在用filepath作为key
+			// 现在用css/neo.css作为value
+			index := strings.Index(pattern, part)
+			params[root.part[1:]] = pattern[index:]
+			return root, params, true
 		}
 	}
 	// 这里我们也不能直接返回，还需要在进一步判断 当前找到的node节点的handler是否非nil，非nil才算成功
@@ -156,6 +158,14 @@ type node struct {
 // 第二个返回值是控制是否是参数匹配：: 和 * 匹配
 // 第三个返回值是控制是否匹配到节点
 func (n *node) childOf(part string) (*node, bool, bool) {
+	if n.children == nil {
+		// 如果精确匹配没有匹配到，先用 : 节点匹配，再用 * 节点匹配
+		if n.paramChild != nil {
+			return n.paramChild, true, n.paramChild != nil
+		}
+		// 如果精确匹配没有匹配到，就用 * 匹配
+		return n.starChild, true, n.starChild != nil
+	}
 	// 因为这里是查找，所以不存在当前节点的children属性是nil的情况
 	// 只有一种情况会是这样，就是叶子节点
 	child, ok := n.children[part]
