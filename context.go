@@ -10,6 +10,8 @@ type Context struct {
 	Request *http.Request
 	// Response 响应。建议自行封装，为了扩展性
 	Response http.ResponseWriter
+	// 路由参数或通配符参数
+	Params map[string]string
 }
 
 func newContext(w http.ResponseWriter, r *http.Request) *Context {
