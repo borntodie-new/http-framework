@@ -83,7 +83,7 @@ func (c *Context) JSON(code int, data any) error {
 		return err
 	}
 	c.SetData(bytes)
-	return c.resp()
+	return nil
 }
 
 // HTML TODO 响应HTML格式数据回去
@@ -94,7 +94,7 @@ func (c *Context) HTML(code int, data any) error {
 	c.SetHeader("Content-Type", "text/html")
 	// 3. 设置响应数据
 	// TODO
-	return c.resp()
+	return nil
 }
 
 // String 响应纯文本的数据回去
@@ -105,7 +105,7 @@ func (c *Context) String(code int, data []byte) error {
 	c.SetHeader("Content-Type", "text/plain")
 	// 3. 设置响应数据
 	c.SetData(data)
-	return c.resp()
+	return nil
 }
 
 // Query 获取查询参数

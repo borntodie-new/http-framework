@@ -49,6 +49,8 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx.params = params
 	// 3. 执行命中路由的视图函数
 	n.handler(ctx)
+	// 4. 统一返回响应
+	_ = ctx.resp()
 }
 
 func (s *HTTPServer) Start(addr string) error {
