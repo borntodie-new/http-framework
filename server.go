@@ -5,6 +5,9 @@ import "net/http"
 // HandleFunc 视图函数的唯一签名
 type HandleFunc func(ctx *Context)
 
+// H 提供一个map结构，方便用户操作
+type H map[string]any
+
 // Server 接口
 // 为什么要这么设计，我们直接一个结构体实现http.Handler接口不可以吗
 // 是可以的，但是为了兼容以后的HTTPS协议做准备
@@ -43,7 +46,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// 保存请求地址上的参数到上下文中
-	ctx.Params = params
+	ctx.params = params
 	// 3. 执行命中路由的视图函数
 	n.handler(ctx)
 }
