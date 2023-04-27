@@ -36,7 +36,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1. 构建上下文
 	ctx := newContext(w, r)
 	// 2. 匹配路由
-	n, ok := s.findRouter(r.Method, r.URL.Path)
+	n, _, ok := s.findRouter(r.Method, r.URL.Path)
 	if !ok || n.handler == nil {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte("404 NOT FOUND"))
