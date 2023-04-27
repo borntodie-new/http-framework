@@ -36,12 +36,14 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1. 构建上下文
 	ctx := newContext(w, r)
 	// 2. 匹配路由
-	n, _, ok := s.findRouter(r.Method, r.URL.Path)
+	n, params, ok := s.findRouter(r.Method, r.URL.Path)
 	if !ok || n.handler == nil {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte("404 NOT FOUND"))
 		return
 	}
+	// 保存请求地址上的参数到上下文中
+	ctx.Params = params
 	// 3. 执行命中路由的视图函数
 	n.handler(ctx)
 }
