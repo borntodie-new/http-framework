@@ -166,3 +166,38 @@ func (c *Context) resp() error {
 	c.setStatusCode()
 	return c.setData()
 }
+
+// - 思考：我们在Param方法、Query方法、Form方法，我们需不需要帮用户解析好
+// 例如：
+//	/user/:id
+//
+//	id, _ := ctx.Param("id")
+//	返回回来的id是一个字符串
+//	我的意思是需不需要将这个字符串转成整型
+//	其实不太建议，如果还是想做，可以考虑下面这种方式
+//
+//func (c *Context) Query(key string) StringValue {
+//	if c.cacheQuery == nil {
+//		c.cacheQuery = c.Request.URL.Query()
+//	}
+//	value, ok := c.cacheQuery[key]
+//	if !ok {
+//		return StringValue{err: errors.New(fmt.Sprintf("Web: %s不存在", key))}
+//	}
+//	return StringValue{value: value[0]}
+//}
+//
+//type StringValue struct {
+//	value string
+//	err   error
+//}
+//
+//func (s StringValue) String() (string, error) {
+//	return s.value, s.err
+//}
+//func (s StringValue) ToInt64() (int64, error) {
+//	if s.err != nil {
+//		return 0, s.err
+//	}
+//	return strconv.ParseInt(s.value, 10, 64)
+//}
