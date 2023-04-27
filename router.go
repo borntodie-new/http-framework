@@ -1,6 +1,8 @@
 package geek_web
 
-import "strings"
+import (
+	"strings"
+)
 
 // router 路由树的结构
 // 1. 提供注册的功能
@@ -62,7 +64,10 @@ func (r *router) addRouter(method string, pattern string, handleFunc HandleFunc)
 		if part == "" {
 			panic("Web: 不能注册连续 / 的路由")
 		}
-		root = root.childOrCreate(part)
+		root, ok = root.childOrCreate(part)
+		if !ok {
+			panic("Web: 路由重复注册")
+		}
 	}
 	if root.handler != nil {
 		panic("Web: 路有冲突")
@@ -91,7 +96,7 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 	// 还是需要将前面的 / 切割出去
 	parts := strings.Split(strings.Trim(pattern, "/"), "/")
 	for _, part := range parts {
-		pOk := false
+		//pOk := false
 		if part == "" {
 			// 表示pattern是 /asud//asd/asd这种连续出现多个 / 情况
 			// 其实这里可以不判断的，出现这样的情况，会切出 ""
@@ -99,17 +104,17 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 			// 不过这里直接做判断，就省得在做无效功
 			return nil, params, false
 		}
-		root, pOk, ok = root.childOf(part)
+		root, _, ok = root.childOf(part)
 		if !ok {
 			return nil, params, false
 		}
-		if pOk { // 是否是参数匹配 :和*匹配
-			if root.paramChild != nil {
-				// 参数路由 : ，匹配到还需要继续往下查找
-				// 并且需要记录好参数
-				params[root.part[1:]] = part
-				continue
-			}
+		if root.paramChild != nil {
+			// 参数路由 : ，匹配到还需要继续往下查找
+			// 并且需要记录好参数
+			params[root.paramChild.part[1:]] = part
+			continue
+		}
+		if root.starChild != nil {
 			// 匹配到 * 节点，贪婪匹配之后直接返回
 			// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
 			// 问题是如何做到贪婪匹配?
@@ -117,10 +122,28 @@ func (r *router) findRouter(method string, pattern string) (*node, map[string]st
 			// 请求的路由：/assets/css/neo.css
 			// 现在用filepath作为key
 			// 现在用css/neo.css作为value
-			index := strings.Index(pattern, part)
-			params[root.part[1:]] = pattern[index:]
-			return root, params, true
+			index := strings.Index(pattern, part) + len(part) + 1
+			params[root.starChild.part[1:]] = pattern[index:]
+			return root.starChild, params, true
 		}
+		//if pOk { // 是否是参数匹配 :和*匹配
+		//	if root.paramChild != nil {
+		//		// 参数路由 : ，匹配到还需要继续往下查找
+		//		// 并且需要记录好参数
+		//		params[root.part[1:]] = part
+		//		continue
+		//	}
+		//	// 匹配到 * 节点，贪婪匹配之后直接返回
+		//	// 这里对于 * 匹配是贪婪匹配，就是说后面的所有路径都要，表示这里需要直接 return
+		//	// 问题是如何做到贪婪匹配?
+		//	// 注册的路由：/assets/*filepath
+		//	// 请求的路由：/assets/css/neo.css
+		//	// 现在用filepath作为key
+		//	// 现在用css/neo.css作为value
+		//	index := strings.Index(pattern, part)
+		//	params[root.part[1:]] = pattern[index:]
+		//	return root, params, true
+		//}
 	}
 	// 这里我们也不能直接返回，还需要在进一步判断 当前找到的node节点的handler是否非nil，非nil才算成功
 	return root, params, root.handler != nil
@@ -182,20 +205,20 @@ func (n *node) childOf(part string) (*node, bool, bool) {
 
 // childOrCreate 用于注册路由使用
 // 查找节点，判断当前节点的子节点中是否存在path节点，已存在返回path节点，不存在就创建节点并添加到子节点中
-func (n *node) childOrCreate(part string) *node {
+func (n *node) childOrCreate(part string) (*node, bool) {
 	if strings.HasPrefix(part, ":") {
 		// 是参数 : 的情况
 		if n.paramChild == nil { // 多判断一层，如果paramChild不是nil，就表示之前这个路由被注册过了
 			n.paramChild = &node{part: part}
 		}
-		return n.paramChild
+		return n.paramChild, n.starChild == nil
 	}
 	if strings.HasPrefix(part, "*") {
 		// 是通配符 * 的情况
 		if n.starChild == nil { // 多一层判断，如果starChild不是nil，就表示之前这个路由被注册过了
 			n.starChild = &node{part: part}
 		}
-		return n.starChild
+		return n.starChild, n.paramChild == nil
 	}
 	// 判断当前节点的子节点属性是否为nil
 	// 为nil就创建
@@ -210,5 +233,26 @@ func (n *node) childOrCreate(part string) *node {
 		}
 		n.children[part] = child
 	}
-	return child
+	return child, true
 }
+
+// bug修复
+// 1. 修复参数路由也会贪婪匹配
+// 2. 解决一个路由同层级上，同时注册参数路由和通配符路由
+
+/**
+- 总结一下
+	目前我们已经完成了三种路由的注册和匹配
+		1. 静态路由
+		2. 参数路由
+		3. 通配符路由
+	这三种路由是有优先级的：静态路由 > 参数路由 > 通配符路由
+	- 对于静态路由和参数路由，两者的逻辑相似，唯一不同的是参数路由需要将请求地址上的携带的参数保存在一个map中而已
+	- 对于通配符路由，我们需要注意，它是贪婪匹配的，所以一旦命中，他会直接返回命中的节点，并且也会保存请求地址上携带的参数
+	接下来我们需要支持正则路由
+	正则路由的优先级是在参数路由之下，通配符路由之上的，并且它的处理逻辑和参数路由相似
+- TODO 正则路由
+	1. 格式：/user/<*.?>
+	2. 优先级：低于参数路由，高于通配符路由
+	3. 特殊处理：无需地址上的携带的数据
+*/
