@@ -28,7 +28,8 @@ type Server interface {
 
 // HTTPServer 实现一个HTTP协议的Server接口
 type HTTPServer struct {
-	*router
+	router       *router // 路由树
+	*RouterGroup         // 路由分组
 }
 
 // 这条语句没有任何实际作用，只是为了在语法层面上能够保证HTTPServer结构体实现了Server接口
@@ -66,25 +67,84 @@ func (s *HTTPServer) Start(addr string) error {
 //	s.addRouter(method, path, handleFunc)
 //}
 
-func (s *HTTPServer) GET(pattern string, handleFunc HandleFunc) {
-	s.addRouter(http.MethodGet, pattern, handleFunc)
-}
-
-func (s *HTTPServer) POST(pattern string, handleFunc HandleFunc) {
-	s.addRouter(http.MethodPost, pattern, handleFunc)
-}
-
-func (s *HTTPServer) DELETE(pattern string, handleFunc HandleFunc) {
-	s.addRouter(http.MethodDelete, pattern, handleFunc)
-}
-
-func (s *HTTPServer) PUT(pattern string, handleFunc HandleFunc) {
-	s.addRouter(http.MethodPut, pattern, handleFunc)
-}
+//func (s *HTTPServer) GET(pattern string, handleFunc HandleFunc) {
+//	s.addRouter(http.MethodGet, pattern, handleFunc)
+//}
+//
+//func (s *HTTPServer) POST(pattern string, handleFunc HandleFunc) {
+//	s.addRouter(http.MethodPost, pattern, handleFunc)
+//}
+//
+//func (s *HTTPServer) DELETE(pattern string, handleFunc HandleFunc) {
+//	s.addRouter(http.MethodDelete, pattern, handleFunc)
+//}
+//
+//func (s *HTTPServer) PUT(pattern string, handleFunc HandleFunc) {
+//	s.addRouter(http.MethodPut, pattern, handleFunc)
+//}
 
 // NewHTTPServer 构造方法
+// server和RouterGroup是相互应用了
 func NewHTTPServer() *HTTPServer {
-	return &HTTPServer{
-		router: newRouter(),
+	router := newRouter()
+	group := newRouterGroup()
+	engine := &HTTPServer{
+		router:      router,
+		RouterGroup: group,
 	}
+	group.engine = engine
+	return engine
+}
+
+/*
+- 思考：
+	1. 路由分组怎么实现？
+	2. 路由分组应该怎么用？
+	3. 路由分组结构怎么设计？
+
+初步思考结论
+	1. 只能有一个路由树，也就是说只能有一个router实例
+	2. 可以有多个路由分组
+	3. 综上：一个server需要内嵌一个router路由树，包含一个RouterGroup路由分组
+	4. RouterGroup需要内嵌一个Server
+	5. 所有的衍生API都是在RouterGroup中完成
+*/
+
+type RouterGroup struct {
+	prefix string       // 路由分组前缀
+	parent *RouterGroup // 父路由组
+	engine *HTTPServer  // server实例对象, 这样写有点不太优雅，因为这里应该是一个接口的，这样直接写成HTTPServer耦合性太高
+}
+
+func (g *RouterGroup) GET(pattern string, handleFunc HandleFunc) {
+	g.addRouter(http.MethodGet, pattern, handleFunc)
+}
+
+func (g *RouterGroup) POST(pattern string, handleFunc HandleFunc) {
+	g.addRouter(http.MethodPost, pattern, handleFunc)
+}
+
+func (g *RouterGroup) DELETE(pattern string, handleFunc HandleFunc) {
+	g.addRouter(http.MethodDelete, pattern, handleFunc)
+}
+
+func (g *RouterGroup) PUT(pattern string, handleFunc HandleFunc) {
+	g.addRouter(http.MethodPut, pattern, handleFunc)
+}
+
+// addRouter 注册路由
+// 唯一和路由树做交互的通道
+func (g *RouterGroup) addRouter(method string, pattern string, handleFunc HandleFunc) {
+	g.engine.router.addRouter(method, pattern, handleFunc)
+}
+
+// findRouter 匹配路由
+// 会有这个方法纯属是为了设计完整完整性，因为前面我们对于路由注册是完全在RouterGroup中完成的
+// 由于完整性，我们也在RouterGroup中定义一个findRouter方法
+func (g *RouterGroup) findRouter(method string, pattern string) (*node, map[string]string, bool) {
+	return g.engine.router.findRouter(method, pattern)
+}
+
+func newRouterGroup() *RouterGroup {
+	return &RouterGroup{}
 }
