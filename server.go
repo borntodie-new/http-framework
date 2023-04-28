@@ -1,6 +1,10 @@
 package geek_web
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+	"strings"
+)
 
 // HandleFunc 视图函数的唯一签名
 type HandleFunc func(ctx *Context)
@@ -135,7 +139,7 @@ func (g *RouterGroup) PUT(pattern string, handleFunc HandleFunc) {
 // addRouter 注册路由
 // 唯一和路由树做交互的通道
 func (g *RouterGroup) addRouter(method string, pattern string, handleFunc HandleFunc) {
-	g.engine.router.addRouter(method, pattern, handleFunc)
+	g.engine.router.addRouter(method, fmt.Sprintf("%s%s", g.prefix, pattern), handleFunc)
 }
 
 // findRouter 匹配路由
@@ -143,6 +147,16 @@ func (g *RouterGroup) addRouter(method string, pattern string, handleFunc Handle
 // 由于完整性，我们也在RouterGroup中定义一个findRouter方法
 func (g *RouterGroup) findRouter(method string, pattern string) (*node, map[string]string, bool) {
 	return g.engine.router.findRouter(method, pattern)
+}
+
+func (g *RouterGroup) Group(prefix string) *RouterGroup {
+	prefix = fmt.Sprintf("/%s", strings.Trim(prefix, "/"))
+	newGroup := &RouterGroup{
+		prefix: prefix,
+		parent: g,
+		engine: g.engine,
+	}
+	return newGroup
 }
 
 func newRouterGroup() *RouterGroup {
