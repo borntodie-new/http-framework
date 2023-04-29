@@ -1,6 +1,7 @@
 package geek_web
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -8,6 +9,49 @@ import (
 func TestServer(t *testing.T) {
 	s := NewHTTPServer()
 	v1 := s.Group("/v1")
+	v1.Use(func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+			fmt.Println("coming middleware1...")
+			next(ctx)
+			fmt.Println("outing middleware1...")
+		}
+	}, func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+			fmt.Println("coming middleware2...")
+			next(ctx)
+			fmt.Println("outing middleware2...")
+		}
+	}, func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+			fmt.Println("coming middleware3...")
+			next(ctx)
+			fmt.Println("outing middleware3...")
+		}
+	}, func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+			fmt.Println("coming middleware4...")
+			next(ctx)
+			fmt.Println("outing middleware4...")
+		}
+	})
+	v2 := s.Group("/v2")
+	v2.Use(func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+
+		}
+	}, func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+
+		}
+	}, func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+
+		}
+	}, func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+
+		}
+	})
 	v1.GET("/user", func(ctx *Context) {
 		_ = ctx.JSON(http.StatusOK, H{
 			"code": 200,
