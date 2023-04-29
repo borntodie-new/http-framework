@@ -2,6 +2,7 @@ package geek_web
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -61,6 +62,7 @@ var _ Server = &HTTPServer{}
 func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1. 构建上下文
 	ctx := newContext(w, r)
+	log.Printf("REQUEST COMING %4s - %s", ctx.Method, ctx.Pattern)
 	// 2. 匹配路由
 	n, params, ok := s.findRouter(ctx.Method, ctx.Pattern)
 	if !ok || n.handler == nil {
@@ -191,7 +193,9 @@ func (g *RouterGroup) PUT(pattern string, handleFunc HandleFunc) {
 // addRouter 注册路由
 // 唯一和路由树做交互的通道
 func (g *RouterGroup) addRouter(method string, pattern string, handleFunc HandleFunc) {
-	g.engine.router.addRouter(method, fmt.Sprintf("%s%s", g.prefix, pattern), handleFunc)
+	pattern = fmt.Sprintf("%s%s", g.prefix, pattern)
+	g.engine.router.addRouter(method, pattern, handleFunc)
+	log.Printf("REGISTER ROUTER %4s - %s", method, pattern)
 }
 
 // findRouter 匹配路由
