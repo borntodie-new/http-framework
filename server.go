@@ -99,7 +99,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 执行下面的方法之后，handler就是框架内部注册的第一个中间件函数
 
 	// 这里统一注册框架内部的中间件
-	handler = s.registerMiddlewares(handler)
+	handler = s.registerMiddlewares(handler) // registerMiddlewares方法必须是将用户的中间件注册完之后才能注册框架内部的中间件逻辑
 	// 具体执行全部的中间件
 	handler(ctx) // 此时handler已经变了
 
@@ -134,11 +134,16 @@ func (s *HTTPServer) registerMiddlewares(handler HandleFunc) HandleFunc {
 	return handler
 }
 
+// initInternalMiddlewares 初始化注册框架内部的中间件
+// 这里的注册逻辑是倒序注册的，越是最外层的越加最晚注册到middlewares中
 func (s *HTTPServer) initInternalMiddlewares() []Middleware {
 	middlewares := make([]Middleware, 0)
 	// 这种注册方式不太好，如果内部需要注册100个中间件，那我们需要手动写100次吗？
 	// 目前暂时用这种方式吧。
 	// 其实可以用IOC方案
+
+	// 注册recovery中间件
+	middlewares = append(middlewares, RecoveryBuilder(nil).Builder())
 	// 注册刷新数据中间件
 	middlewares = append(middlewares, FlashDataBuilder().Builder())
 	return middlewares
