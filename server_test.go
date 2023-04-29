@@ -26,14 +26,14 @@ func TestServer(t *testing.T) {
 	v1.Use(builder.Builder())
 	{
 		v1.GET("/user", func(ctx *Context) {
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"method": ctx.Method,
 			})
 		})
 		v1.GET("/user/login", func(ctx *Context) {
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"method": ctx.Method,
@@ -41,7 +41,7 @@ func TestServer(t *testing.T) {
 		})
 		v1.GET("/assets/*filepath", func(ctx *Context) {
 			filePath, _ := ctx.Param("filepath")
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"info":   "你是想访问我的这个文件吗？【" + filePath + "]",
@@ -51,7 +51,7 @@ func TestServer(t *testing.T) {
 		v1.GET("/user/:id/:action", func(ctx *Context) {
 			id, _ := ctx.Param("id")
 			action, _ := ctx.Param("action")
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"id":     id,
@@ -63,14 +63,14 @@ func TestServer(t *testing.T) {
 	v2 := s.Group("/v2")
 	{
 		v2.POST("/user", func(ctx *Context) {
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"method": ctx.Method,
 			})
 		})
 		v2.POST("/user/login", func(ctx *Context) {
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"method": ctx.Method,
@@ -78,7 +78,7 @@ func TestServer(t *testing.T) {
 		})
 		v2.POST("/assets/*filepath", func(ctx *Context) {
 			filePath, _ := ctx.Param("filepath")
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"info":   "你是想访问我的这个文件吗？【" + filePath + "]",
@@ -88,7 +88,7 @@ func TestServer(t *testing.T) {
 		v2.POST("/user/:id/:action", func(ctx *Context) {
 			id, _ := ctx.Param("id")
 			action, _ := ctx.Param("action")
-			_ = ctx.JSON(http.StatusOK, H{
+			ctx.JSON(http.StatusOK, H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
 				"id":     id,
