@@ -160,12 +160,20 @@ func (c *Context) setData() error {
 	return err
 }
 
-// resp 统一返回
-func (c *Context) resp() error {
+// Resp 统一返回
+// 目前这个好像得暴露出去，不然在同意刷新数据到响应体的中间件中就不能调用了
+// 其实好的就是小写，使其成为一个内部方法
+func (c *Context) Resp() error {
 	c.setHeader()
 	c.setStatusCode()
 	return c.setData()
 }
+
+//func (c *Context) resp() error {
+//	c.setHeader()
+//	c.setStatusCode()
+//	return c.setData()
+//}
 
 // - 思考：我们在Param方法、Query方法、Form方法，我们需不需要帮用户解析好
 // 例如：

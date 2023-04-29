@@ -85,13 +85,22 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		handler = middlewares[i](handler) // 第一次执行的时候，handler其实还是用户的业务视图
 	}
-	// 具体执行中间件方法
-	handler(ctx)
+
+	// 没执行下面的方法之前，handler是用户注册的第一个中间件函数
+	// 执行下面的方法之后，handler就是框架内部注册的第一个中间件函数
+
+	// 这里统一注册框架内部的中间件
+	handler = s.registerMiddlewares(handler)
+	// 具体执行全部的中间件
+	handler(ctx) // 此时handler已经变了
+
+	//// 具体执行中间件方法
+	//handler(ctx) // 此时handler是用户注册的第一个中间件
 
 	// 3. 执行命中路由的视图函数
-	//n.handler(ctx)
+	// n.handler(ctx)
 	// 4. 统一返回响应
-	_ = ctx.resp()
+	// _ = ctx.Resp()
 }
 
 func (s *HTTPServer) Start(addr string) error {
@@ -106,6 +115,24 @@ func (s *HTTPServer) filterGroup(pattern string) []Middleware {
 		}
 	}
 	return nil
+}
+
+// registerMiddlewares 注册框架内部的中间件
+func (s *HTTPServer) registerMiddlewares(handler HandleFunc) HandleFunc {
+	for _, middleware := range s.initInternalMiddlewares() {
+		handler = middleware(handler)
+	}
+	return handler
+}
+
+func (s *HTTPServer) initInternalMiddlewares() []Middleware {
+	middlewares := make([]Middleware, 0)
+	// 这种注册方式不太好，如果内部需要注册100个中间件，那我们需要手动写100次吗？
+	// 目前暂时用这种方式吧。
+	// 其实可以用IOC方案
+	// 注册刷新数据中间件
+	middlewares = append(middlewares, FlashDataBuilder().Builder())
+	return middlewares
 }
 
 // addRouter 作为注册路由的唯一通道
