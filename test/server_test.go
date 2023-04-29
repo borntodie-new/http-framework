@@ -26,6 +26,8 @@ func TestServer(t *testing.T) {
 	v1.Use(builder.Builder())
 	{
 		v1.GET("/user", func(ctx *geek_web.Context) {
+			s := []int{1, 2, 3}
+			fmt.Println(s[100]) // 这里直接报错：下标越界
 			_ = ctx.JSON(http.StatusOK, geek_web.H{
 				"code":   200,
 				"msg":    "请求成功" + ctx.Pattern,
