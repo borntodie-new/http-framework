@@ -142,33 +142,34 @@ func (c *Context) SetCookie(cookie *http.Cookie) {
 
 // 下述方法这只是临时性的，我们后面会通过AOP的形式完成自动设置状态码、响应头和响应数据到Response中
 
-// setHeader 统一设置响应头
-func (c *Context) setHeader() {
-	for k, v := range c.header {
-		c.Response.Header().Set(k, v)
-	}
-}
-
-// setStatusCode 统一设置状态码
-func (c *Context) setStatusCode() {
-	c.Response.WriteHeader(c.status)
-}
-
-// setData 统一设置响应数据
-func (c *Context) setData() error {
-	_, err := c.Response.Write((c.data).([]byte))
-	return err
-}
+//// setHeader 统一设置响应头
+//func (c *Context) setHeader() {
+//	for k, v := range c.header {
+//		c.Response.Header().Set(k, v)
+//	}
+//}
+//
+//// setStatusCode 统一设置状态码
+//func (c *Context) setStatusCode() {
+//	c.Response.WriteHeader(c.status)
+//}
+//
+//// setData 统一设置响应数据
+//func (c *Context) setData() error {
+//	_, err := c.Response.Write((c.data).([]byte))
+//	return err
+//}
 
 // Resp 统一返回
 // 目前这个好像得暴露出去，不然在同意刷新数据到响应体的中间件中就不能调用了
 // 其实好的就是小写，使其成为一个内部方法
-func (c *Context) Resp() error {
-	c.setHeader()
-	c.setStatusCode()
-	return c.setData()
-}
+//func (c *Context) Resp() error {
+//	c.setHeader()
+//	c.setStatusCode()
+//	return c.setData()
+//}
 
+// resp 因为flashData内部中间件和Context上下文在同一个包中，所有不再需要将下面的方法改成大写暴露出去
 //func (c *Context) resp() error {
 //	c.setHeader()
 //	c.setStatusCode()

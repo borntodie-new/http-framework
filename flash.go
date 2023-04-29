@@ -23,7 +23,20 @@ func (m *MiddlewareFlashData) Builder() Middleware {
 		return func(ctx *Context) {
 			defer func() {
 				// 统一刷新数据到response中
-				_ = ctx.Resp()
+				// 1. 设置响应头
+				for k, v := range ctx.header {
+					ctx.Response.Header().Set(k, v)
+				}
+				// 2. 设置状态码
+				ctx.Response.WriteHeader(ctx.status)
+				// 3. 设置响应体
+				_, err := ctx.Response.Write((ctx.data).([]byte))
+				// 如果刷新数据到响应体中出现错误，直接panic
+				// 后面会有一个recovery hook住panic错误的
+				if err != nil {
+					panic(err)
+				}
+				//_ = ctx.resp()
 			}()
 			next(ctx)
 		}

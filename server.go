@@ -66,9 +66,18 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 2. 匹配路由
 	n, params, ok := s.findRouter(ctx.Method, ctx.Pattern)
 	if !ok || n.handler == nil {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte("404 NOT FOUND"))
-		return
+		// 下面的逻辑目前是直接写数据到响应体中，并且直接返回到客户端
+		// 不太好，因为这种方式没有执行框架内部中间件和用户中间件
+		//w.WriteHeader(http.StatusNotFound)
+		//_, _ = w.Write([]byte("404 NOT FOUND"))
+		//return
+
+		// 优化: 主要思路就是将n【匹配到的路由节点】篡改掉，具体是改handler方法
+		n = &node{handler: func(ctx *Context) {
+			ctx.SetStatusCode(http.StatusNotFound)
+			ctx.SetData([]byte("404 NOT FOUND"))
+			return
+		}}
 	}
 	// 保存请求地址上的参数到上下文中
 	ctx.params = params
