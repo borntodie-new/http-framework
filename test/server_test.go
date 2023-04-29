@@ -119,5 +119,11 @@ func TestServer(t *testing.T) {
 			ctx.HTML(http.StatusOK, "login.gohtml", data)
 		})
 	}
+	v4 := s.Group("/v4")
+	staticHandler := geek_web.NewStaticFileHandler("../static", "assets", "filepath")
+	{
+		v4.GET(fmt.Sprintf("/%s/*%s",
+			staticHandler.Prefix, staticHandler.ParamsKey), staticHandler.Handler)
+	}
 	_ = s.Start(":8080")
 }
