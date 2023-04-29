@@ -1,6 +1,7 @@
 package geek_web
 
 import (
+	"fmt"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"io/ioutil"
 	"net/http"
@@ -79,6 +80,12 @@ func (s *StaticFileHandler) Handler(ctx *Context) {
 	// 2.1 如果用户传入一个不存在的文件名，最终文件肯定是读取不到的
 	// 2.2 如果用户知道我们的文件结构，传入一些我们的系统文件名，那怎么办？
 	filePath := filepath.Join(s.openPath, fileName)
+	if data, ok := s.readFileFromCache(filePath); ok {
+		fmt.Println("确实是从缓存中读取到的数据")
+		ctx.SetStatusCode(http.StatusOK)
+		ctx.SetData(data)
+		return
+	}
 	file, err := os.Open(filePath)
 	if err != nil {
 		ctx.SetStatusCode(http.StatusInternalServerError)
@@ -92,7 +99,28 @@ func (s *StaticFileHandler) Handler(ctx *Context) {
 		ctx.SetData([]byte("Server Internal Error, Please Try Again Later!"))
 		return
 	}
-	// 3. 写入数据到响应中
+	// 3. 写入数据到缓存中
+	s.writeFileToCache(filePath, data)
+	//if ok := s.cache.Add(filePath, data); !ok {
+	//	ctx.SetStatusCode(http.StatusInternalServerError)
+	//	ctx.SetData([]byte("Server Internal Error, Please Try Again Later!"))
+	//	return
+	//}
+	// 4. 写入数据到响应中
 	ctx.SetStatusCode(http.StatusOK)
 	ctx.SetData(data)
+}
+
+// readFileFromCache 从缓存中读取数据
+func (s *StaticFileHandler) readFileFromCache(key string) ([]byte, bool) {
+	if s.cache != nil {
+		if data, ok := s.cache.Get(key); ok {
+			return data.([]byte), true
+		}
+	}
+	return nil, false
+}
+
+func (s *StaticFileHandler) writeFileToCache(key string, value []byte) {
+	s.cache.Add(key, value)
 }
