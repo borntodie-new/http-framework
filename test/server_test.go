@@ -107,7 +107,14 @@ func TestServer(t *testing.T) {
 	if err != nil {
 		panic("Web: 解析文件失败")
 	}
+	staticHandler := geek_web.NewStaticFileHandler("../static",
+		"assets",
+		"filepath",
+		geek_web.StaticFileWithCache(5, 5<<23), // 每个文件最大就是5M
+	)
 	{
+		v3.GET(fmt.Sprintf("/%s/*%s",
+			staticHandler.Prefix, staticHandler.ParamsKey), staticHandler.Handler)
 		v3.GET("/login", func(ctx *geek_web.Context) {
 			data := struct {
 				Username string
@@ -120,7 +127,6 @@ func TestServer(t *testing.T) {
 		})
 	}
 	v4 := s.Group("/v4")
-	staticHandler := geek_web.NewStaticFileHandler("../static", "assets", "filepath")
 	{
 		v4.GET(fmt.Sprintf("/%s/*%s",
 			staticHandler.Prefix, staticHandler.ParamsKey), staticHandler.Handler)
