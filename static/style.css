@@ -5,3 +5,7 @@ header {
 .container {
     display: flex;
 }
+
+body {
+    background-color: rebeccapurple;
+}
