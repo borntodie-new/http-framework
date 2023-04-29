@@ -30,12 +30,15 @@ func (m *MiddlewareFlashData) Builder() Middleware {
 				// 2. 设置状态码
 				ctx.Response.WriteHeader(ctx.status)
 				// 3. 设置响应体
-				_, err := ctx.Response.Write((ctx.data).([]byte))
+				// 这里将逻辑改了吧，先recovery，最后在刷新数据
+				// 因为recovery中也需要将错误信息刷新到响应体中
+				// 如果这里也有错误，那也就没办法了
+				_, _ = ctx.Response.Write((ctx.data).([]byte))
 				// 如果刷新数据到响应体中出现错误，直接panic
 				// 后面会有一个recovery hook住panic错误的
-				if err != nil {
-					panic(err)
-				}
+				//if err != nil {
+				//	panic(err)
+				//}
 				//_ = ctx.resp()
 			}()
 			next(ctx)
