@@ -36,6 +36,22 @@ type HTTPServer struct {
 	router       *router        // 路由树
 	*RouterGroup                // 路由分组
 	groups       []*RouterGroup // 保存程序中产生的所有路由组实例
+	// templateEngine 这里只是为了一个过渡，最终还是或将这个落到Context上下文中
+	// 我们思考一下，这个模板渲染的功能是所有的用户都需要的吗？或者说，至少大部分用户都需要用到？
+	// 其实不是的，这个功能对很多用户来说并不需要，所以我们这里可以做一个优化处理，对于有需求的用户，需要额外再做一些配置，对HTTPServer对象
+	templateEngine TemplateEngine
+}
+
+// ServerOption 抽象一个可配置的类型
+type ServerOption func(server *HTTPServer)
+
+// ServerWithTemplateEngine 给HTTPServer配置配置上模板引擎对象
+// 需要向外暴露，如果有需求的用户直接使用这个可配置项方法进行配置
+// 这种方法有点像装饰器😀😀
+func ServerWithTemplateEngine(t TemplateEngine) ServerOption {
+	return func(server *HTTPServer) {
+		server.templateEngine = t
+	}
 }
 
 // 这条语句没有任何实际作用，只是为了在语法层面上能够保证HTTPServer结构体实现了Server接口
@@ -62,6 +78,8 @@ var _ Server = &HTTPServer{}
 func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1. 构建上下文
 	ctx := newContext(w, r)
+	// 将HTTPServer中的TemplateEngine对象转给Context上下文对象
+	ctx.t = s.templateEngine
 	log.Printf("REQUEST COMING %4s - %s", ctx.Method, ctx.Pattern)
 	// 2. 匹配路由
 	n, params, ok := s.findRouter(ctx.Method, ctx.Pattern)
@@ -175,7 +193,7 @@ func (s *HTTPServer) initInternalMiddlewares() []Middleware {
 
 // NewHTTPServer 构造方法
 // server和RouterGroup是相互应用了
-func NewHTTPServer() *HTTPServer {
+func NewHTTPServer(opts ...ServerOption) *HTTPServer {
 	r := newRouter()
 	group := newRouterGroup()
 	engine := &HTTPServer{
@@ -184,6 +202,10 @@ func NewHTTPServer() *HTTPServer {
 		groups:      []*RouterGroup{},
 	}
 	group.engine = engine
+	// 通过这个就能做成一个可配置的HTTPServer了
+	for _, opt := range opts {
+		opt(engine)
+	}
 	return engine
 }
 

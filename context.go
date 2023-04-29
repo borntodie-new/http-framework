@@ -32,6 +32,9 @@ type Context struct {
 	status int               // 状态码
 	data   any               // 需要响应回去的数据：任意数据
 	header map[string]string // 响应头数据
+
+	// 模板引擎对象
+	t TemplateEngine
 }
 
 func newContext(w http.ResponseWriter, r *http.Request) *Context {
@@ -66,13 +69,18 @@ func (c *Context) SetHeader(key, value string) {
 	c.header[key] = value
 }
 
+// DelHeader 删除响应头数据
+func (c *Context) DelHeader(key string) {
+	delete(c.header, key)
+}
+
 // SetData 设置需要响应回去的数据
 func (c *Context) SetData(data any) {
 	c.data = data
 }
 
 // JSON 响应JSON格式数据
-func (c *Context) JSON(code int, data any) error {
+func (c *Context) JSON(code int, data any) {
 	// 1. 设置状态码
 	c.SetStatusCode(code)
 	// 2. 设置响应头
@@ -80,32 +88,37 @@ func (c *Context) JSON(code int, data any) error {
 	// 3. 序列化
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		return err
+		c.DelHeader("Context-Type")
+		// 解析出错，直接panic，反正后面有recovery兜底
+		panic(err)
 	}
 	c.SetData(bytes)
-	return nil
 }
 
 // HTML TODO 响应HTML格式数据回去
-func (c *Context) HTML(code int, data any) error {
+func (c *Context) HTML(code int, templateName string, data any) {
 	// 1. 设置状态码
 	c.SetStatusCode(code)
 	// 2. 设置响应头
 	c.SetHeader("Content-Type", "text/html")
 	// 3. 设置响应数据
-	// TODO
-	return nil
+	html, err := c.t.Render(c, templateName, data)
+	if err != nil {
+		c.SetStatusCode(http.StatusInternalServerError)
+		c.DelHeader("Content-Type")
+		html = []byte("Server Internal Error, Please Try Again Later!")
+	}
+	c.SetData(html)
 }
 
 // String 响应纯文本的数据回去
-func (c *Context) String(code int, data []byte) error {
+func (c *Context) String(code int, data []byte) {
 	// 1. 设置状态码
 	c.SetStatusCode(code)
 	// 2. 设置响应头
 	c.SetHeader("Content-Type", "text/plain")
 	// 3. 设置响应数据
 	c.SetData(data)
-	return nil
 }
 
 // Query 获取查询参数
