@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"github.com/borntodie-new/geek-web"
 	"github.com/borntodie-new/geek-web/middleware/accesslog"
+	"github.com/borntodie-new/geek-web/session"
+	"github.com/borntodie-new/geek-web/session/cookie"
+	"github.com/borntodie-new/geek-web/session/memory"
+	"github.com/google/uuid"
 	"net/http"
 	"testing"
 	"time"
@@ -130,6 +134,64 @@ func TestServer(t *testing.T) {
 	{
 		v4.GET(fmt.Sprintf("/%s/*%s",
 			staticHandler.Prefix, staticHandler.ParamsKey), staticHandler.Handler)
+	}
+	v5 := s.Group("/v5")
+	{
+		// 创建Propagator对象和Store对象
+		propagator := cookie.NewPropagator("sessionId", cookie.WithCookieOpt(func(cookie *http.Cookie) {
+			cookie.HttpOnly = true
+		})) // 用户配置一个自定义的cookie属性
+		store := memory.NewStore(time.Hour * 24 * 7) // 有效期7天
+		manager := &session.Manager{
+			Store:      store,
+			Propagator: propagator,
+			SessKey:    "Web-Framework-Session-Key",
+		}
+		v5.GET("/login", func(ctx *geek_web.Context) {
+			id := uuid.New()
+			sess, err := manager.CreateSession(ctx, id.String())
+			if err != nil {
+				ctx.SetStatusCode(http.StatusInternalServerError)
+				ctx.SetData([]byte("Server Internal Error, Please Try Again Later"))
+				return
+			}
+			err = sess.Set(ctx.Request.Context(), "username", "jason")
+			if err != nil {
+				ctx.SetStatusCode(http.StatusInternalServerError)
+				ctx.SetData([]byte("Server Internal Error, Please Try Again Later"))
+				return
+			}
+			err = sess.Set(ctx.Request.Context(), "password", "jason123")
+			if err != nil {
+				ctx.SetStatusCode(http.StatusInternalServerError)
+				ctx.SetData([]byte("Server Internal Error, Please Try Again Later"))
+				return
+			}
+		})
+		v5.GET("/home", func(ctx *geek_web.Context) {
+			sess, err := manager.RetrieveSession(ctx)
+			if err != nil {
+				ctx.SetStatusCode(http.StatusNotFound)
+				ctx.SetData([]byte("Sorry, You Not Login"))
+				return
+			}
+			username, err := sess.Get(ctx.Request.Context(), "username")
+			if err != nil {
+				ctx.SetStatusCode(http.StatusNotFound)
+				ctx.SetData([]byte("Sorry, You Not Login"))
+				return
+			}
+			password, err := sess.Get(ctx.Request.Context(), "password")
+			if err != nil {
+				ctx.SetStatusCode(http.StatusNotFound)
+				ctx.SetData([]byte("Sorry, You Not Login"))
+				return
+			}
+			ctx.JSON(http.StatusOK, geek_web.H{
+				"username": username.(string),
+				"password": password.(string),
+			})
+		})
 	}
 	_ = s.Start(":8080")
 }
